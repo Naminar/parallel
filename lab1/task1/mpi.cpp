@@ -1,77 +1,81 @@
-#include <chrono>
-#include <math.h>
+#include <cassert>
+#include <cmath>
+#include <cstdio>
 #include <mpi.h>
-#include <stdio.h>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
-#define ISIZE 1000
-#define JSIZE 1000
+int main(int argc, char **argv) {
+  int world_size;
+  int world_rank;
+  int ISIZE = 10;
+  int JSIZE = 12;
 
-int main(int argc, char *argv[]) {
-  int rank, size;
-  double a[ISIZE][JSIZE];
-  int i, j;
-  FILE *ff;
-  for (i = 0; i < ISIZE; i++) {
-    for (j = 0; j < JSIZE; j++) {
-      a[i][j] = 10 * i + j;
-    }
-  }
-  // start
-  auto start = std::chrono::high_resolution_clock::now();
+  int size, rank;
+  int tag = 1;
+  MPI_Status status;
 
   MPI_Init(&argc, &argv);
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
   MPI_Comm_size(MPI_COMM_WORLD, &size);
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
-  // Divide the work among processes
-  int rows_per_process = ISIZE / size;
-  int start_row = rank * rows_per_process + 2; // Adjust for i >= 2
-  int end_row = start_row + rows_per_process;
-
-  // Ensure last process handles remaining rows
-  if (rank == size - 1) {
-    end_row = ISIZE;
+  int chunk = JSIZE / size;
+  int **localBox = new int *[ISIZE];
+  for (int i = 0; i < ISIZE; i++) {
+    localBox[i] = new int[chunk + 3];
   }
 
-  // Perform computation
-  for (i = start_row; i < end_row; i++) {
-    for (j = 0; j < JSIZE - 3; j++) {
-      a[i][j] = sin(5 * a[i - 2][j + 3]);
-    }
+  // for (int i = 0; i < ISIZE; i++) {
+  //     delete[] localBox[i];
+  // }
+  // delete[] localBox;
+
+  // if (rank = 0) {
+  for (int i = 0; i < ISIZE; i++)
+    for (int j = 0; j < chunk; j++)
+      localBox[i][j] = 10 * i + rank * chunk + j;
+  // }
+  if (rank != 0) {
+    MPI_Send(&localBox[0][0], 3, MPI_INT, rank - 1, tag, MPI_COMM_WORLD);
+    MPI_Send(&localBox[1][0], 3, MPI_INT, rank - 1, tag, MPI_COMM_WORLD);
   }
 
-  // Gather results (if needed, only rank 0 gathers all)
-  if (rank == 0) {
-    for (int p = 1; p < size; p++) {
-      int recv_start_row = p * rows_per_process + 2;
-      int recv_end_row = recv_start_row + rows_per_process;
+  if (rank != size - 1) {
+    for (int i = 2; i < ISIZE; i++) {
+      MPI_Recv(&localBox[i - 2][chunk], 3, MPI_INT, rank + 1, tag,
+               MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      // std::cout << rank << " <= rank | " << localBox[i - 2][chunk] << " " <<
+      // localBox[i - 2][chunk+1] << " " << localBox[i - 2][chunk+2] <<
+      // std::endl;
+      for (int j = 0; j < chunk; j++)
+        localBox[i][j] =
+            localBox[i - 2][j + 3]; // sin(5 * localBox[i - 2][j + 3]);
 
-      if (p == size - 1) {
-        recv_end_row = ISIZE;
-      }
-
-      MPI_Recv(&a[recv_start_row][0], (recv_end_row - recv_start_row) * JSIZE,
-               MPI_DOUBLE, p, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      if (rank != 0)
+        MPI_Send(&localBox[i][0], 3, MPI_INT, rank - 1, tag, MPI_COMM_WORLD);
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration =
-        std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
-    std::cout << "Duration: " << duration.count() << " ms\n";
-
-    ff = fopen("result_mpi.txt", "w");
-    for (i = 0; i < ISIZE; i++) {
-      for (j = 0; j < JSIZE; j++) {
-        fprintf(ff, "%f ", a[i][j]);
-      }
-      fprintf(ff, "\n");
-    }
-    fclose(ff);
   } else {
-    // Send computed results to rank 0
-    MPI_Send(&a[start_row][0], (end_row - start_row) * JSIZE, MPI_DOUBLE, 0, 0,
-             MPI_COMM_WORLD);
+    for (int i = 2; i < ISIZE; i++) {
+      for (int j = 0; j < chunk - 3; j++)
+        localBox[i][j] =
+            localBox[i - 2][j + 3]; // sin(5 * localBox[i - 2][j + 3]);
+      MPI_Send(&localBox[i][0], 3, MPI_INT, rank - 1, tag, MPI_COMM_WORLD);
+    }
   }
+
+  for (int i = 0; i < ISIZE; i++) {
+    for (int j = 0; j < chunk; j++)
+      std::cout << rank << " <= rank | (ij) | " << i << " " << j << " | "
+                << localBox[i][j] << std::endl;
+  }
+
+  for (int i = 0; i < ISIZE; i++) {
+    delete[] localBox[i];
+  }
+  delete[] localBox;
 
   MPI_Finalize();
+
   return 0;
 }

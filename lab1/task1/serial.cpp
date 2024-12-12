@@ -3,12 +3,17 @@
 #include <iostream>
 #include <math.h>
 #include <stdio.h>
+#include <vector>
 
-#define ISIZE 10
-#define JSIZE 10
+// #define ISIZE 1000
+// #define JSIZE 1000
 
 int main(int argc, char **argv) {
-  double a[ISIZE][JSIZE];
+  // double a[ISIZE][JSIZE];
+  unsigned ISIZE = 1000;
+  unsigned JSIZE = 3000;
+
+  std::vector<std::vector<double>> a{ISIZE, std::vector<double>(JSIZE, 0)};
   int i, j;
   FILE *ff;
   for (i = 0; i < ISIZE; i++) {
