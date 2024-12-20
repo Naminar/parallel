@@ -25,8 +25,7 @@ int main(int argc, char **argv)
     FILE *ff;
     for (i=0; i<ISIZE; i++){
         for (j=0; j<JSIZE; j++){
-            a[i][j] = 10*i +j;
-            b[i][j] = a[i][j];
+            b[i][j] = 10*i +j;
         }
     }
   // start
@@ -38,6 +37,19 @@ int main(int argc, char **argv)
             a[i][j] = sin(0.2*b[i+1][j-6]);
         }
     }
+
+    for (i=ISIZE-1; i<ISIZE; i++){
+        for (j = 6; j < JSIZE; j++){
+            a[i][j] = 10*i +j;
+        }
+    }
+
+    for (i=0; i<ISIZE-1; i++){
+        for (j = 5; j >= 0; j--){
+            a[i][j] = 10*i+j;
+        }
+    }
+
   // end
   auto end = std::chrono::high_resolution_clock::now();
   auto duration =

@@ -64,13 +64,13 @@ int main(int argc, char **argv) {
     }
   }
 
-  if (rank == 0) {
-    auto end = std::chrono::high_resolution_clock::now();
-    std::cout << "Duration: "
-              << std::chrono::duration_cast<std::chrono::nanoseconds>(end -
-                                                                      start)
-                     .count()
-              << " ms\n";}
+  // if (rank == 0) {
+  //   auto end = std::chrono::high_resolution_clock::now();
+  //   std::cout << "Duration: "
+  //             << std::chrono::duration_cast<std::chrono::nanoseconds>(end -
+  //                                                                     start)
+  //                    .count()
+  //             << " ms\n";}
 
   // for (int i = 0; i < ISIZE; i++){
   //   for (int j = 0; j < chunk; j++)
@@ -83,6 +83,14 @@ int main(int argc, char **argv) {
   MPI_Allgather(shared_buffer, (chunk + 3) * ISIZE, MPI_FLOAT,
                 global_shared_buffer, (chunk + 3) * ISIZE, MPI_FLOAT,
                 MPI_COMM_WORLD);
+
+   if (rank == 0) {
+    auto end = std::chrono::high_resolution_clock::now();
+    std::cout << "Duration: "
+              << std::chrono::duration_cast<std::chrono::nanoseconds>(end -
+                                                                      start)
+                     .count()
+              << " ms\n";}
 
   if (rank == 0) {
     // auto end = std::chrono::high_resolution_clock::now();
